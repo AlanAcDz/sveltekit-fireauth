@@ -1,19 +1,7 @@
-import { initializeApp, getApps, getApp } from 'firebase/app'
+import { initializeApp, getApps, getApp, type FirebaseOptions } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 
-const firebaseConfig = {
-	apiKey: '',
-	authDomain: '',
-	databaseURL: '',
-	projectId: '',
-	storageBucket: '',
-	messagingSenderId: '',
-	appId: '',
-	measurementId: '',
+export const createFirebaseAuth = (config: FirebaseOptions) => {
+	const firebaseApp = getApps().length === 0 ? initializeApp(config) : getApp()
+	return getAuth(firebaseApp)
 }
-
-export const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
-
-export const firebaseAuth = getAuth(firebaseApp)
-
-export const getPublicApiKey = () => firebaseConfig.apiKey

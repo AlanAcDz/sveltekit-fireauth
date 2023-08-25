@@ -4,11 +4,15 @@ import { FIREBASE_SERVICE_ACCOUNT_KEY } from '$env/static/private'
 
 const serviceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT_KEY)
 
-const adminApp =
-	getApps().length === 0
-		? initializeApp({
-				credential: cert(serviceAccount),
-		  })
-		: getApp()
-
-export const adminAuth = getAuth(adminApp)
+export const createAdminAuth = () => {
+	if (!FIREBASE_SERVICE_ACCOUNT_KEY) {
+		throw new Error('Missing "FIREBASE_SERVICE_ACCOUNT_KEY" in environment')
+	}
+	const adminApp =
+		getApps().length === 0
+			? initializeApp({
+					credential: cert(serviceAccount),
+			  })
+			: getApp()
+	return getAuth(adminApp)
+}

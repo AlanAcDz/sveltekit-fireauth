@@ -34,11 +34,6 @@ export interface SessionCookies {
 	expiresIn: number
 }
 
-export interface Session {
-	uid: string
-	token: string
-}
-
 export interface CredentialsLogin {
 	event: RequestEvent
 	email: string
@@ -49,3 +44,16 @@ export interface TokenLogin {
 	event: RequestEvent
 	token: string
 }
+
+export interface AuthConfig {
+	firebaseOptions: import('firebase/app').FirebaseOptions
+	refreshExpireTime: number
+}
+
+export interface Session {
+	uid: string
+	token: string
+}
+
+export type AdminAuth = import('firebase-admin').auth.Auth
+export type FirebaseAuth = import('firebase/auth').Auth

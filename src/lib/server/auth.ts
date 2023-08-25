@@ -6,7 +6,8 @@ import {
 	createUserWithEmailAndPassword,
 } from 'firebase/auth'
 import { dev } from '$app/environment'
-import { firebaseAuth, getPublicApiKey } from '../client/config'
+import { createFirebaseAuth } from '../client/config'
+import { createAdminAuth } from './config'
 import {
 	AuthCookies,
 	type CookieData,
@@ -16,14 +17,14 @@ import {
 	type Session,
 	type CredentialsLogin,
 	type TokenLogin,
+	type AuthConfig,
 } from './types'
-import { adminAuth } from './config'
 
-type Fetch = typeof fetch
-
-const refreshExpireTime = 60 * 60 * 24 * 30
+let refreshExpireTime = 60 * 60 * 24 * 30 // default 30 days
 const loginURL = 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken'
 const refreshTokenURL = 'https://securetoken.googleapis.com/v1/token'
+
+const setRefreshExpireTime = (time: number) => (refreshExpireTime = time)
 
 // ---------- LOGIN LOGIC ------------
 const setAuthCookie = (cookies: Cookies, { name, data, expiresIn }: CookieData) => {
@@ -36,7 +37,10 @@ const setAuthCookie = (cookies: Cookies, { name, data, expiresIn }: CookieData) 
 	})
 }
 
-const createSessionCookies = async (cookies: Cookies, data: SessionCookies) => {
+const createSessionCookies = async (
+	{ cookies, locals: { adminAuth } }: RequestEvent,
+	data: SessionCookies
+) => {
 	const { idToken, customToken, refreshToken, expiresIn } = data
 	// expiresIn is in milliseconds
 	const sessionCookie = await adminAuth.createSessionCookie(idToken, {
@@ -51,8 +55,8 @@ const createSessionCookies = async (cookies: Cookies, data: SessionCookies) => {
 	})
 }
 
-const fetchAuthTokens = async (fetch: Fetch, customToken: string) => {
-	const apiKey = getPublicApiKey()
+const fetchAuthTokens = async ({ fetch, locals }: RequestEvent, customToken: string) => {
+	const { apiKey } = locals.firebaseAuth.config
 	const url = `${loginURL}?key=${apiKey}`
 	const response = await fetch(url, {
 		method: 'POST',
@@ -67,32 +71,32 @@ const fetchAuthTokens = async (fetch: Fetch, customToken: string) => {
 }
 
 export const loginWithCredentials = async ({ event, email, password }: CredentialsLogin) => {
-	const { cookies, fetch } = event
+	const { adminAuth, firebaseAuth } = event.locals
 	await setPersistence(firebaseAuth, inMemoryPersistence)
 	const { user } = await signInWithEmailAndPassword(firebaseAuth, email, password)
 	const customToken = await adminAuth.createCustomToken(user.uid)
-	const { idToken, refreshToken, expiresIn } = await fetchAuthTokens(fetch, customToken)
-	await createSessionCookies(cookies, { idToken, refreshToken, customToken, expiresIn })
+	const { idToken, refreshToken, expiresIn } = await fetchAuthTokens(event, customToken)
+	await createSessionCookies(event, { idToken, refreshToken, customToken, expiresIn })
 	return customToken
 }
 
 export const loginWithIdToken = async ({ event, token }: TokenLogin) => {
-	const { cookies, fetch } = event
+	const { adminAuth } = event.locals
 	const { uid } = await adminAuth.verifyIdToken(token, true)
 	const customToken = await adminAuth.createCustomToken(uid)
-	const { idToken, refreshToken, expiresIn } = await fetchAuthTokens(fetch, customToken)
-	await createSessionCookies(cookies, { idToken, refreshToken, customToken, expiresIn })
+	const { idToken, refreshToken, expiresIn } = await fetchAuthTokens(event, customToken)
+	await createSessionCookies(event, { idToken, refreshToken, customToken, expiresIn })
 	return customToken
 }
 
 // --------- SIGNUP LOGIC -----------
 export const signupWithCredentials = async ({ event, email, password }: CredentialsLogin) => {
-	const { cookies, fetch } = event
+	const { adminAuth, firebaseAuth } = event.locals
 	await setPersistence(firebaseAuth, inMemoryPersistence)
 	const { user } = await createUserWithEmailAndPassword(firebaseAuth, email, password)
 	const customToken = await adminAuth.createCustomToken(user.uid)
-	const { idToken, refreshToken, expiresIn } = await fetchAuthTokens(fetch, customToken)
-	await createSessionCookies(cookies, { idToken, refreshToken, customToken, expiresIn })
+	const { idToken, refreshToken, expiresIn } = await fetchAuthTokens(event, customToken)
+	await createSessionCookies(event, { idToken, refreshToken, customToken, expiresIn })
 	return { token: customToken, user }
 }
 
@@ -105,8 +109,8 @@ export const signOut = (cookies: Cookies, redirectUrl = '/') => {
 }
 
 // ---------- REFRESH LOGIC -----------
-const refreshIdToken = async (fetch: Fetch, refreshToken: string) => {
-	const apiKey = getPublicApiKey()
+const refreshIdToken = async ({ fetch, locals }: RequestEvent, refreshToken: string) => {
+	const { apiKey } = locals.firebaseAuth.config
 	const url = `${refreshTokenURL}?key=${apiKey}`
 	const response = await fetch(url, {
 		method: 'POST',
@@ -120,12 +124,16 @@ const refreshIdToken = async (fetch: Fetch, refreshToken: string) => {
 	return { ...rest, expiresIn: +expires_in }
 }
 
-const refreshUserSession = async ({ cookies, fetch }: RequestEvent): Promise<Session | null> => {
+const refreshUserSession = async (event: RequestEvent): Promise<Session | null> => {
+	const {
+		cookies,
+		locals: { adminAuth },
+	} = event
 	const refreshToken = cookies.get(AuthCookies.REFRESH)
 	if (!refreshToken) {
 		return null
 	}
-	const refreshResponse = await refreshIdToken(fetch, refreshToken)
+	const refreshResponse = await refreshIdToken(event, refreshToken)
 	if (!refreshResponse) {
 		return null
 	}
@@ -133,7 +141,7 @@ const refreshUserSession = async ({ cookies, fetch }: RequestEvent): Promise<Ses
 	try {
 		const { uid } = await adminAuth.verifyIdToken(id_token, true)
 		const customToken = await adminAuth.createCustomToken(uid)
-		await createSessionCookies(cookies, {
+		await createSessionCookies(event, {
 			idToken: id_token,
 			refreshToken: refresh_token,
 			customToken,
@@ -146,7 +154,10 @@ const refreshUserSession = async ({ cookies, fetch }: RequestEvent): Promise<Ses
 }
 
 const verifySession = async (event: RequestEvent): Promise<Session | null> => {
-	const { cookies } = event
+	const {
+		cookies,
+		locals: { adminAuth },
+	} = event
 	const session = cookies.get(AuthCookies.SESSION)
 	if (!session) {
 		return refreshUserSession(event)
@@ -165,7 +176,12 @@ const verifySession = async (event: RequestEvent): Promise<Session | null> => {
 	}
 }
 
-export const createAuthHandle: Handle = async ({ event, resolve }) => {
-	event.locals.verifySession = () => verifySession(event)
-	return resolve(event)
+export const createAuthHandle = ({ firebaseOptions, refreshExpireTime }: AuthConfig): Handle => {
+	return ({ event, resolve }) => {
+		setRefreshExpireTime(refreshExpireTime)
+		event.locals.adminAuth = createAdminAuth()
+		event.locals.firebaseAuth = createFirebaseAuth(firebaseOptions)
+		event.locals.verifySession = () => verifySession(event)
+		return resolve(event)
+	}
 }
