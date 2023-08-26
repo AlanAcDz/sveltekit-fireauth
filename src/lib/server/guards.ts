@@ -4,72 +4,70 @@ import {
 	type ServerLoadEvent,
 	type RequestEvent,
 	type Handle,
+	type RequestHandler,
 } from '@sveltejs/kit'
 
 type AuthReturn<Out> = Out extends undefined ? undefined : Out
 
-interface LoadGuardOptions {
-	redirectRoute?: string
+interface LoadGuardOptions<In, Out> {
+	redirectRoute: string
+	load?: (event: In) => Out
 }
 
-interface HandleGuardOptions extends LoadGuardOptions {
+interface HandleGuardOptions {
+	redirectRoute: string
 	baseRoute: string
 }
 
-const defaultLoginRoute = '/login'
-const defaultProtectedRoute = '/'
-
-export const onlyAuthenticatedLoad = <In extends ServerLoadEvent, Out>(
-	{ redirectRoute = defaultLoginRoute }: LoadGuardOptions,
-	loadFn?: (event: In) => Out
-) => {
+export const onlyAuthenticatedLoad = <In extends ServerLoadEvent, Out>({
+	redirectRoute,
+	load,
+}: LoadGuardOptions<In, Out>) => {
 	return async (event: In): Promise<AuthReturn<Out>> => {
 		const session = await event.locals.verifySession()
 		if (!session) {
 			throw redirect(303, redirectRoute)
 		}
-		return (loadFn ? loadFn(event) : undefined) as AuthReturn<Out>
+		return (load ? load(event) : undefined) as AuthReturn<Out>
 	}
 }
 
-export const onlyPublicLoad = <In extends ServerLoadEvent, Out>(
-	{ redirectRoute = defaultProtectedRoute }: LoadGuardOptions,
-	loadFn?: (event: In) => Out
-) => {
+export const onlyPublicLoad = <In extends ServerLoadEvent, Out>({
+	redirectRoute,
+	load,
+}: LoadGuardOptions<In, Out>) => {
 	return async (event: In): Promise<AuthReturn<Out>> => {
 		const session = await event.locals.verifySession()
 		if (session) {
 			throw redirect(303, redirectRoute)
 		}
-		return (loadFn ? loadFn(event) : undefined) as AuthReturn<Out>
+		return (load ? load(event) : undefined) as AuthReturn<Out>
 	}
 }
 
-export const onlyAuthenticatedRoute = <In extends RequestEvent, Out>(
-	loadFn: (event: In) => Out
-) => {
-	return async (event: In): Promise<AuthReturn<Out>> => {
+export const onlyAuthenticatedRoute = <In extends RequestEvent>(requestHandler: RequestHandler) => {
+	return async (event: In) => {
 		const session = await event.locals.verifySession()
 		if (!session) {
 			throw error(401, { message: 'Unauthorized' })
 		}
-		return loadFn(event) as AuthReturn<Out>
+		return requestHandler(event)
 	}
 }
 
-export const onlyPublicRoute = <In extends RequestEvent, Out>(loadFn: (event: In) => Out) => {
-	return async (event: In): Promise<AuthReturn<Out>> => {
+export const onlyPublicRoute = <In extends RequestEvent>(requestHandler: RequestHandler) => {
+	return async (event: In) => {
 		const session = await event.locals.verifySession()
 		if (session) {
 			throw error(401, { message: 'Unauthorized' })
 		}
-		return loadFn(event) as AuthReturn<Out>
+		return requestHandler(event)
 	}
 }
 
 export const createProtectedRoutesHandle = ({
 	baseRoute,
-	redirectRoute = defaultLoginRoute,
+	redirectRoute,
 }: HandleGuardOptions): Handle => {
 	return async ({ event, resolve }) => {
 		if (event.url.pathname.startsWith(baseRoute)) {
@@ -84,7 +82,7 @@ export const createProtectedRoutesHandle = ({
 
 export const createPublicRoutesHandle = ({
 	baseRoute,
-	redirectRoute = defaultProtectedRoute,
+	redirectRoute,
 }: HandleGuardOptions): Handle => {
 	return async ({ event, resolve }) => {
 		if (event.url.pathname.startsWith(baseRoute)) {
