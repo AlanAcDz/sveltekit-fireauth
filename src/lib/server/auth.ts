@@ -101,11 +101,17 @@ export const signupWithCredentials = async ({ event, email, password }: Credenti
 }
 
 // ---------- LOGOUT LOGIC -----------
-export const signOut = (cookies: Cookies, redirectUrl = '/') => {
+export const signOut = ({
+	cookies,
+	redirectRoute = '/',
+}: {
+	cookies: Cookies
+	redirectRoute?: string
+}) => {
 	cookies.delete(AuthCookies.SESSION, { path: '/' })
 	cookies.delete(AuthCookies.REFRESH, { path: '/' })
 	cookies.delete(AuthCookies.CUSTOM, { path: '/' })
-	throw redirect(303, redirectUrl)
+	throw redirect(303, redirectRoute)
 }
 
 // ---------- REFRESH LOGIC -----------
@@ -176,11 +182,11 @@ const verifySession = async (event: RequestEvent): Promise<Session | null> => {
 	}
 }
 
-export const createAuthHandle = ({ firebaseOptions, refreshExpireTime }: AuthConfig): Handle => {
+export const createAuthHandle = ({ firebaseConfig, refreshExpireTime }: AuthConfig): Handle => {
 	return ({ event, resolve }) => {
 		setRefreshExpireTime(refreshExpireTime)
 		event.locals.adminAuth = createAdminAuth()
-		event.locals.firebaseAuth = createFirebaseAuth(firebaseOptions)
+		event.locals.firebaseAuth = createFirebaseAuth(firebaseConfig)
 		event.locals.verifySession = () => verifySession(event)
 		return resolve(event)
 	}
