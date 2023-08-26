@@ -1,58 +1,110 @@
-# create-svelte
+# sveltekit-fireauth
 
-Everything you need to build a Svelte library, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+A SvelteKit library for seamless server-side authentication using Firebase Authentication.
 
-Read more about creating a library [in the docs](https://kit.svelte.dev/docs/packaging).
+Partially inspired by [next-firebase-auth](https://github.com/gladly-team/next-firebase-auth), check out its discussion of [when (not) to use this package](https://github.com/gladly-team/next-firebase-auth#when-not-to-use-this-package).
 
-## Creating a project
+## Quick start
 
-If you're seeing this, you've probably already done this step. Congrats!
+This guide will assume your app uses typescript. If not, why?
+
+1. Install this package with peer dependencies
 
 ```bash
-# create a new project in the current directory
-npm create svelte@latest
-
-# create a new project in my-app
-npm create svelte@latest my-app
+ npm i sveltekit-fireauth firebase firebase-admin
 ```
 
-## Developing
+2. Set up the required types in `app.d.ts`
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+```typescript
+import type { AdminAuth, FirebaseAuth, Session } from 'sveltekit-fireauth/server'
 
-```bash
-npm run dev
+declare global {
+	namespace App {
+		interface Locals {
+			adminAuth: AdminAuth
+			firebaseAuth: FirebaseAuth
+			verifySession: () => Promise<Session | null>
+		}
+	}
+}
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+export {}
 ```
 
-Everything inside `src/lib` is part of your library, everything inside `src/routes` can be used as a showcase or preview app.
+3. Set up your Firebase's service account credentials in your `.env` file. This will be used to initialize the firebase-admin client.
 
-## Building
-
-To build your library:
-
-```bash
-npm run package
+```
+FIREBASE_SERVICE_ACCOUNT_KEY=<your-service-account>
 ```
 
-To create a production version of your showcase app:
+4. Set up a handle hook inside `hooks.server.ts`
 
-```bash
-npm run build
+```typescript
+import type { Handle } from '@sveltejs/kit'
+import { createAuthHandle } from 'sveltekit-fireauth/server'
+
+export const handle: Handle = createAuthHandle({
+	// Your web app's Firebase configuration
+	firebaseConfig: {
+		apiKey: '',
+		authDomain: '',
+		projectId: '',
+		storageBucket: '',
+		messagingSenderId: '',
+		appId: '',
+	},
+	// Optional. Refresh token cookie expire time, default 30 days
+	refreshExpireTime: 60 * 60 * 24 * 30,
+})
 ```
 
-You can preview the production build with `npm run preview`.
+You may want to use the [sequence](https://kit.svelte.dev/docs/modules#sveltejs-kit-hooks-sequence) helper function to set up multiple handle hooks, especially if you are going to use this library's other handle hooks.
 
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+5. Set up some form actions to log in and log out a user.
 
-## Publishing
+```typescript
+import { loginWithCredentials, signOut } from 'sveltekit-fireauth/server'
 
-Go into the `package.json` and give your package the desired name through the `"name"` option. Also consider adding a `"license"` field and point it to a `LICENSE` file which you can create from a template (one popular option is the [MIT license](https://opensource.org/license/mit/)).
+export const actions = {
+	login: async (event) => {
+		// Get the email and password from the form
+		try {
+			await loginWithCredentials({ event, email, password })
+		} catch (e) {
+			throw error(401, { message: 'Unauthorized' })
+		}
+		throw redirect(303, '/')
+	},
+	logout: async ({ cookies }) => {
+		return signOut({ cookies, redirectRoute: '/login' })
+	},
+}
+```
 
-To publish your library to [npm](https://www.npmjs.com):
+6. Pass the user's session to the client-side
 
-```bash
-npm publish
+```typescript
+// +layout.server.ts
+export const load = async ({ locals }) => ({
+	session: locals.verifySession(),
+})
+```
+
+```typescript
+// +layout.ts
+export const load = async ({ data }) => ({
+	session: data.session,
+})
+```
+
+```svelte
+<!-- +layout.svelte -->
+<script lang="ts">
+	export let data
+
+	$: ({ session } = data)
+</script>
+
+<p>Logged in as user: {session.uid}</p>
 ```
