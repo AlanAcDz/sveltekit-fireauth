@@ -47,7 +47,8 @@ export interface TokenLogin {
 
 export interface AuthConfig {
 	firebaseConfig: import('firebase/app').FirebaseOptions
-	refreshExpireTime: number
+	refreshExpireTime?: number
+	serviceAccountKey?: string
 }
 
 export interface Session {

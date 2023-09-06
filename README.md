@@ -30,17 +30,12 @@ declare global {
 export {}
 ```
 
-3. Set up your Firebase's service account credentials in your `.env` file. This will be used to initialize the firebase-admin client.
-
-```
-FIREBASE_SERVICE_ACCOUNT_KEY=<your-service-account>
-```
-
-4. Set up a handle hook inside `hooks.server.ts`
+3. Set up a handle hook inside `hooks.server.ts`
 
 ```typescript
 import type { Handle } from '@sveltejs/kit'
 import { createAuthHandle } from 'sveltekit-fireauth/server'
+import { FIREBASE_SERVICE_ACCOUNT_KEY } from '$env/static/private'
 
 export const handle: Handle = createAuthHandle({
 	// Your web app's Firebase configuration
@@ -52,6 +47,8 @@ export const handle: Handle = createAuthHandle({
 		messagingSenderId: '',
 		appId: '',
 	},
+	// Optional. Just set the FIREBASE_SERVICE_ACCOUNT_KEY environment variable and the library will pick it up
+	serviceAccountKey: FIREBASE_SERVICE_ACCOUNT_KEY,
 	// Optional. Refresh token cookie expire time, default 30 days
 	refreshExpireTime: 60 * 60 * 24 * 30,
 })
@@ -59,7 +56,7 @@ export const handle: Handle = createAuthHandle({
 
 You may want to use the [sequence](https://kit.svelte.dev/docs/modules#sveltejs-kit-hooks-sequence) helper function to set up multiple handle hooks, especially if you are going to use this library's other handle hooks.
 
-5. Set up some form actions to log in and log out a user.
+4. Set up some form actions to log in and log out a user.
 
 ```typescript
 import { loginWithCredentials, signOut } from 'sveltekit-fireauth/server'
@@ -80,7 +77,7 @@ export const actions = {
 }
 ```
 
-6. Pass the user's session to the client-side
+5. Pass the user's session to the client-side
 
 ```typescript
 // +layout.server.ts

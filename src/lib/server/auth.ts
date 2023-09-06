@@ -5,14 +5,14 @@ import { createFirebaseAuth } from '../client/config'
 import { createAdminAuth } from './config'
 
 export class FirebaseAuth {
-	refreshExpireTime = 60 * 60 * 24 * 30 // default 30 days
+	refreshExpireTime: number
 	config: FirebaseOptions
 	private client: ClientAuth
 	private admin: AdminAuth
-	constructor({ firebaseConfig, refreshExpireTime }: AuthConfig) {
+	constructor({ firebaseConfig, refreshExpireTime, serviceAccountKey }: AuthConfig) {
 		this.client = createFirebaseAuth(firebaseConfig)
-		this.admin = createAdminAuth()
-		this.refreshExpireTime = refreshExpireTime
+		this.admin = createAdminAuth(serviceAccountKey)
+		this.refreshExpireTime = refreshExpireTime ?? 60 * 60 * 24 * 30 // default 30 days
 		this.config = firebaseConfig
 	}
 	getAdminAuth() {
