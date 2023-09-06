@@ -56,4 +56,4 @@ export interface Session {
 }
 
 export type AdminAuth = import('firebase-admin').auth.Auth
-export type FirebaseAuth = import('firebase/auth').Auth
+export type ClientAuth = import('firebase/auth').Auth

@@ -6,7 +6,7 @@ const serviceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT_KEY)
 
 export const createAdminAuth = () => {
 	if (!FIREBASE_SERVICE_ACCOUNT_KEY) {
-		throw new Error('Missing "FIREBASE_SERVICE_ACCOUNT_KEY" in environment')
+		throw new Error('[Auth]: Missing "FIREBASE_SERVICE_ACCOUNT_KEY" in environment')
 	}
 	const adminApp =
 		getApps().length === 0

@@ -1,7 +1,7 @@
 import { onAuthStateChanged, signInWithCustomToken, signOut } from 'firebase/auth'
-import type { FirebaseAuth, Session } from '../server'
+import type { ClientAuth, Session } from '../server'
 
-export const syncAuthState = (auth: FirebaseAuth, session: Session | null) => {
+export const syncAuthState = (auth: ClientAuth, session: Session | null) => {
 	const unsubscribe = onAuthStateChanged(auth, async (user) => {
 		if (!user && session) {
 			return signInWithCustomToken(auth, session.token)

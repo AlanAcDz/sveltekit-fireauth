@@ -1,3 +1,4 @@
-export type { Session, AdminAuth, FirebaseAuth } from './types'
+export type { Session, AdminAuth, ClientAuth } from './types'
 export * from './auth'
+export * from './helpers'
 export * from './guards'

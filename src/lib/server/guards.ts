@@ -6,6 +6,7 @@ import {
 	type Handle,
 	type RequestHandler,
 } from '@sveltejs/kit'
+import { verifySession } from './helpers'
 
 type AuthReturn<Out> = Out extends undefined ? undefined : Out
 
@@ -24,7 +25,7 @@ export const onlyAuthenticatedLoad = <In extends ServerLoadEvent, Out>({
 	load,
 }: LoadGuardOptions<In, Out>) => {
 	return async (event: In): Promise<AuthReturn<Out>> => {
-		const session = await event.locals.verifySession()
+		const session = await verifySession(event)
 		if (!session) {
 			throw redirect(303, redirectRoute)
 		}
@@ -37,7 +38,7 @@ export const onlyPublicLoad = <In extends ServerLoadEvent, Out>({
 	load,
 }: LoadGuardOptions<In, Out>) => {
 	return async (event: In): Promise<AuthReturn<Out>> => {
-		const session = await event.locals.verifySession()
+		const session = await verifySession(event)
 		if (session) {
 			throw redirect(303, redirectRoute)
 		}
@@ -47,7 +48,7 @@ export const onlyPublicLoad = <In extends ServerLoadEvent, Out>({
 
 export const onlyAuthenticatedRoute = <In extends RequestEvent>(requestHandler: RequestHandler) => {
 	return async (event: In) => {
-		const session = await event.locals.verifySession()
+		const session = await verifySession(event)
 		if (!session) {
 			throw error(401, { message: 'Unauthorized' })
 		}
@@ -57,7 +58,7 @@ export const onlyAuthenticatedRoute = <In extends RequestEvent>(requestHandler: 
 
 export const onlyPublicRoute = <In extends RequestEvent>(requestHandler: RequestHandler) => {
 	return async (event: In) => {
-		const session = await event.locals.verifySession()
+		const session = await verifySession(event)
 		if (session) {
 			throw error(401, { message: 'Unauthorized' })
 		}
@@ -71,7 +72,7 @@ export const createProtectedRoutesHandle = ({
 }: HandleGuardOptions): Handle => {
 	return async ({ event, resolve }) => {
 		if (event.url.pathname.startsWith(baseRoute)) {
-			const session = await event.locals.verifySession()
+			const session = await verifySession(event)
 			if (!session) {
 				throw redirect(303, redirectRoute)
 			}
@@ -86,7 +87,7 @@ export const createPublicRoutesHandle = ({
 }: HandleGuardOptions): Handle => {
 	return async ({ event, resolve }) => {
 		if (event.url.pathname.startsWith(baseRoute)) {
-			const session = await event.locals.verifySession()
+			const session = await verifySession(event)
 			if (session) {
 				throw redirect(303, redirectRoute)
 			}

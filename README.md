@@ -17,14 +17,12 @@ This guide will assume your app uses typescript. If not, why?
 2. Set up the required types in `app.d.ts`
 
 ```typescript
-import type { AdminAuth, FirebaseAuth, Session } from 'sveltekit-fireauth/server'
+import type { FirebaseAuth } from 'sveltekit-fireauth/server'
 
 declare global {
 	namespace App {
 		interface Locals {
-			adminAuth: AdminAuth
-			firebaseAuth: FirebaseAuth
-			verifySession: () => Promise<Session | null>
+			auth: FirebaseAuth
 		}
 	}
 }
@@ -86,8 +84,10 @@ export const actions = {
 
 ```typescript
 // +layout.server.ts
+import { verifySession } from 'sveltekit-fireauth/server'
+
 export const load = async ({ locals }) => ({
-	session: locals.verifySession(),
+	session: verifySession(),
 })
 ```
 
