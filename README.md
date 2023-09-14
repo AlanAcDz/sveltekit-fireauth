@@ -6,7 +6,7 @@ Partially inspired by [next-firebase-auth](https://github.com/gladly-team/next-f
 
 ## Quick start
 
-This guide will assume your app uses typescript. If not, why?
+This guide will assume your app uses typescript
 
 1. Install this package with peer dependencies
 
