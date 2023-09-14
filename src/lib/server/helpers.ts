@@ -22,6 +22,12 @@ const loginURL = 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithC
 const refreshTokenURL = 'https://securetoken.googleapis.com/v1/token'
 
 // ---------- LOGIN LOGIC ------------
+/**
+ * Sets an authentication cookie with the specified name, data, and expiration.
+ *
+ * @param {Cookies} cookies - An object for managing cookies.
+ * @param {CookieData} options - Configuration options for the cookie.
+ */
 const setAuthCookie = (cookies: Cookies, { name, data, expiresIn }: CookieData) => {
 	cookies.set(name, data, {
 		path: '/',
@@ -32,6 +38,12 @@ const setAuthCookie = (cookies: Cookies, { name, data, expiresIn }: CookieData) 
 	})
 }
 
+/**
+ * Creates and sets authentication cookies for a user session.
+ *
+ * @param {RequestEvent} requestEvent - The SvelteKit request event object.
+ * @param {SessionCookies} data - Data for creating session cookies.
+ */
 const createSessionCookies = async ({ cookies, locals }: RequestEvent, data: SessionCookies) => {
 	const admin = locals.auth.getAdminAuth()
 	const { idToken, customToken, refreshToken, expiresIn } = data
@@ -48,6 +60,14 @@ const createSessionCookies = async ({ cookies, locals }: RequestEvent, data: Ses
 	})
 }
 
+/**
+ * Fetches authentication tokens by exchanging a custom token with Firebase Authentication.
+ *
+ * @param {RequestEvent} requestEvent - The SvelteKit request event object.
+ * @param {string} customToken - The custom token to exchange for authentication tokens.
+ * @throws {Error} Throws an error if the fetch operation fails or if authentication fails.
+ * @returns {Promise} - An object containing authentication tokens and their expiration.
+ */
 const fetchAuthTokens = async ({ fetch, locals }: RequestEvent, customToken: string) => {
 	const { apiKey } = locals.auth.config
 	const url = `${loginURL}?key=${apiKey}`
@@ -63,6 +83,12 @@ const fetchAuthTokens = async ({ fetch, locals }: RequestEvent, customToken: str
 	return { ...rest, expiresIn: +expiresIn }
 }
 
+/**
+ * Logs in a user with email and password credentials, creates custom tokens, and sets authentication cookies.
+ *
+ * @param {CredentialsLogin} options - Options for logging in with credentials.
+ * @returns {Promise<string>} - The custom token for the logged-in user.
+ */
 export const loginWithCredentials = async ({ event, email, password }: CredentialsLogin) => {
 	const admin = event.locals.auth.getAdminAuth()
 	const client = event.locals.auth.getClientAuth()
@@ -74,6 +100,12 @@ export const loginWithCredentials = async ({ event, email, password }: Credentia
 	return customToken
 }
 
+/**
+ * Logs in a user with an ID token, creates custom tokens, and sets authentication cookies.
+ *
+ * @param {TokenLogin} options - Options for logging in with an ID token.
+ * @returns {Promise<string>} - The custom token for the logged-in user.
+ */
 export const loginWithIdToken = async ({ event, token }: TokenLogin) => {
 	const admin = event.locals.auth.getAdminAuth()
 	const { uid } = await admin.verifyIdToken(token, true)
@@ -84,6 +116,12 @@ export const loginWithIdToken = async ({ event, token }: TokenLogin) => {
 }
 
 // --------- SIGNUP LOGIC -----------
+/**
+ * Signs up a new user with email and password credentials, creates custom tokens, and sets authentication cookies.
+ *
+ * @param {CredentialsLogin} options - Options for signing up with credentials.
+ * @returns {Promise<{ token: string, user: UserCredential }>} - An object containing the custom token and user information for the newly signed-up user.
+ */
 export const signupWithCredentials = async ({ event, email, password }: CredentialsLogin) => {
 	const admin = event.locals.auth.getAdminAuth()
 	const client = event.locals.auth.getClientAuth()
@@ -96,6 +134,12 @@ export const signupWithCredentials = async ({ event, email, password }: Credenti
 }
 
 // ---------- LOGOUT LOGIC -----------
+/**
+ * Signs out a user by deleting authentication cookies and initiating a redirection.
+ *
+ * @param {{ cookies: Cookies, redirectRoute?: string }} options - Options for signing out.
+ * @throws {Redirect} Throws a redirect with a status code of 303.
+ */
 export const signOut = ({
 	cookies,
 	redirectRoute = '/',
@@ -110,6 +154,13 @@ export const signOut = ({
 }
 
 // ---------- REFRESH LOGIC -----------
+/**
+ * Refreshes an ID token using a refresh token provided by Firebase Authentication.
+ *
+ * @param {RequestEvent} requestEvent - The SvelteKit request event object.
+ * @param {string} refreshToken - The refresh token to use for token refresh.
+ * @returns {Promise<{} | null>} - An object containing refreshed tokens and their expiration, or null if the refresh fails.
+ */
 const refreshIdToken = async ({ fetch, locals }: RequestEvent, refreshToken: string) => {
 	const { apiKey } = locals.auth.config
 	const url = `${refreshTokenURL}?key=${apiKey}`
@@ -125,6 +176,12 @@ const refreshIdToken = async ({ fetch, locals }: RequestEvent, refreshToken: str
 	return { ...rest, expiresIn: +expires_in }
 }
 
+/**
+ * Refreshes the user's session by using a refresh token and updating authentication cookies.
+ *
+ * @param {RequestEvent} event - The SvelteKit request event object.
+ * @returns {Promise<Session | null>} - An object representing the refreshed user session, or null if the session cannot be refreshed.
+ */
 const refreshUserSession = async (event: RequestEvent): Promise<Session | null> => {
 	const { cookies, locals } = event
 	const refreshToken = cookies.get(AuthCookies.REFRESH)
@@ -152,6 +209,12 @@ const refreshUserSession = async (event: RequestEvent): Promise<Session | null> 
 	}
 }
 
+/**
+ * Verifies and retrieves the user's session, either from cookies or by refreshing it if needed.
+ *
+ * @param {RequestEvent} event - The SvelteKit request event object.
+ * @returns {Promise<Session | null>} - An object representing the user's session, or null if no valid session is found.
+ */
 export const verifySession = async (event: RequestEvent): Promise<Session | null> => {
 	const { cookies, locals } = event
 	const session = cookies.get(AuthCookies.SESSION)
@@ -173,6 +236,12 @@ export const verifySession = async (event: RequestEvent): Promise<Session | null
 	}
 }
 
+/**
+ * Verifies and retrieves the user's session, including user information, if a valid session exists.
+ *
+ * @param {RequestEvent} event - The SvelteKit request event object.
+ * @returns {Promise<UserSession | null>} - An object representing the user's session and user information, or null if no valid session is found.
+ */
 export const verifyUserSession = async (event: RequestEvent): Promise<UserSession | null> => {
 	const session = await verifySession(event)
 	if (!session) {
