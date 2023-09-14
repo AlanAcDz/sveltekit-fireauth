@@ -15,6 +15,7 @@ import {
 	type Session,
 	type CredentialsLogin,
 	type TokenLogin,
+	type UserSession,
 } from './types'
 
 const loginURL = 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken'
@@ -170,4 +171,24 @@ export const verifySession = async (event: RequestEvent): Promise<Session | null
 	} catch (e) {
 		return refreshUserSession(event)
 	}
+}
+
+export const verifyUserSession = async (event: RequestEvent): Promise<UserSession | null> => {
+	const session = await verifySession(event)
+	if (!session) {
+		return null
+	}
+	const admin = event.locals.auth.getAdminAuth()
+	const { uid, email, emailVerified, disabled, displayName, phoneNumber, photoURL } =
+		await admin.getUser(session.uid)
+	const user = {
+		uid,
+		email,
+		emailVerified,
+		disabled,
+		displayName,
+		phoneNumber,
+		photoURL,
+	}
+	return { ...session, user }
 }

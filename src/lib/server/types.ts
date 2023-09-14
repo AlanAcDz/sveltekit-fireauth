@@ -1,4 +1,5 @@
 import type { RequestEvent } from '@sveltejs/kit'
+import type { UserRecord } from 'firebase-admin/auth'
 
 export enum AuthCookies {
 	SESSION = 'session',
@@ -54,6 +55,13 @@ export interface AuthConfig {
 export interface Session {
 	uid: string
 	token: string
+}
+
+export interface UserSession extends Session {
+	user: Pick<
+		UserRecord,
+		'uid' | 'email' | 'emailVerified' | 'disabled' | 'displayName' | 'phoneNumber' | 'photoURL'
+	>
 }
 
 export type AdminAuth = import('firebase-admin').auth.Auth
