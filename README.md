@@ -20,11 +20,11 @@ This guide will assume your app uses typescript
 import type { FirebaseAuth } from 'sveltekit-fireauth/server'
 
 declare global {
-	namespace App {
-		interface Locals {
-			auth: FirebaseAuth
-		}
-	}
+  namespace App {
+    interface Locals {
+      auth: FirebaseAuth
+    }
+  }
 }
 
 export {}
@@ -38,19 +38,19 @@ import { createAuthHandle } from 'sveltekit-fireauth/server'
 import { FIREBASE_SERVICE_ACCOUNT_KEY } from '$env/static/private'
 
 export const handle: Handle = createAuthHandle({
-	// Your web app's Firebase configuration
-	firebaseConfig: {
-		apiKey: '',
-		authDomain: '',
-		projectId: '',
-		storageBucket: '',
-		messagingSenderId: '',
-		appId: '',
-	},
-	// Optional. Just set the FIREBASE_SERVICE_ACCOUNT_KEY environment variable and the library will pick it up
-	serviceAccountKey: FIREBASE_SERVICE_ACCOUNT_KEY,
-	// Optional. Refresh token cookie expire time, default 30 days
-	refreshExpireTime: 60 * 60 * 24 * 30,
+  // Your web app's Firebase configuration
+  firebaseConfig: {
+    apiKey: '',
+    authDomain: '',
+    projectId: '',
+    storageBucket: '',
+    messagingSenderId: '',
+    appId: '',
+  },
+  // Optional. Just set the FIREBASE_SERVICE_ACCOUNT_KEY environment variable and the library will pick it up
+  serviceAccountKey: FIREBASE_SERVICE_ACCOUNT_KEY,
+  // Optional. Refresh token cookie expire time, default 30 days
+  refreshExpireTime: 60 * 60 * 24 * 30,
 })
 ```
 
@@ -62,18 +62,18 @@ You may want to use the [sequence](https://kit.svelte.dev/docs/modules#sveltejs-
 import { loginWithCredentials, signOut } from 'sveltekit-fireauth/server'
 
 export const actions = {
-	login: async (event) => {
-		// Get the email and password from the form
-		try {
-			await loginWithCredentials({ event, email, password })
-		} catch (e) {
-			throw error(401, { message: 'Unauthorized' })
-		}
-		throw redirect(303, '/')
-	},
-	logout: async ({ cookies }) => {
-		return signOut({ cookies, redirectRoute: '/login' })
-	},
+  login: async (event) => {
+    // Get the email and password from the form
+    try {
+      await loginWithCredentials({ event, email, password })
+    } catch (e) {
+      throw error(401, { message: 'Unauthorized' })
+    }
+    throw redirect(303, '/')
+  },
+  logout: async ({ cookies }) => {
+    return signOut({ cookies, redirectRoute: '/login' })
+  },
 }
 ```
 
@@ -84,23 +84,23 @@ export const actions = {
 import { verifySession } from 'sveltekit-fireauth/server'
 
 export const load = async ({ locals }) => ({
-	session: verifySession(),
+  session: verifySession(),
 })
 ```
 
 ```typescript
 // +layout.ts
 export const load = async ({ data }) => ({
-	session: data.session,
+  session: data.session,
 })
 ```
 
 ```svelte
 <!-- +layout.svelte -->
 <script lang="ts">
-	export let data
+  export let data
 
-	$: ({ session } = data)
+  $: ({ session } = data)
 </script>
 
 <p>Logged in as user: {session.uid}</p>
