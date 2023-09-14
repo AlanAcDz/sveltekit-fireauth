@@ -77,21 +77,16 @@ export const actions = {
 }
 ```
 
+If you prefer so, this could be done using request handlers as well.
+
 5. Pass the user's session to the client-side
 
 ```typescript
 // +layout.server.ts
 import { verifySession } from 'sveltekit-fireauth/server'
 
-export const load = async ({ locals }) => ({
-  session: verifySession(),
-})
-```
-
-```typescript
-// +layout.ts
-export const load = async ({ data }) => ({
-  session: data.session,
+export const load = (event) => ({
+  session: verifySession(event),
 })
 ```
 
@@ -104,4 +99,84 @@ export const load = async ({ data }) => ({
 </script>
 
 <p>Logged in as user: {session.uid}</p>
+```
+
+## Recipes
+
+### Protecting Pages
+
+You can protect a page using the `onlyAuthenticatedLoad` function inside any page's `+page.server.ts` file. For example:
+
+```typescript
+// src/routes/protected/+page.server.ts
+import { onlyAuthenticatedLoad } from 'sveltekit-fireauth/server'
+
+export const load = onlyAuthenticatedLoad({
+  redirectRoute: '/',
+  load: () => {
+    // regular load function here
+  },
+})
+```
+
+Passing a load function is optional, in case a particular page does not load anything from the server.
+
+```typescript
+// src/routes/protected/+page.server.ts
+import { onlyAuthenticatedLoad } from 'sveltekit-fireauth/server'
+
+export const load = onlyAuthenticatedLoad({
+  redirectRoute: '/',
+})
+```
+
+This approach gives you the flexibility to handle authentication on a per page basis and without introducing waterfalls. This also seems to be the recommended approach to handle authentication in SvelteKit, at least as a TLDR from [this discussion](https://github.com/sveltejs/kit/issues/6315).
+
+However, I'm aware this approach also introduces some overhead, having to call `onlyAuthenticatedLoad` on every page you want to protect. So this library also includes a `createProtectedRoutesHandle` for you to use in your `hooks.server.ts`.
+
+```typescript
+import { createAuthHandle } from 'sveltekit-fireauth/server'
+
+const protectedRoutesHandle: Handle = createProtectedRoutesHandle({
+  baseRoute: '/protected', // the group of routes you want to protect
+  redirectRoute: '/',
+})
+
+export const handle = sequence(/* ... */)
+```
+
+There also exists `onlyPublicLoad` and `createPublicRoutesHandle` functions for you to keep your authenticated users out of your login page (or any page you want).
+
+### Syncing authentication state with the client
+
+If you're using the Firebase SDK on the client and have security rules for Firestore or Storage you will need to sync the server-side session with the client.
+
+```typescript
+// +layout.server.ts
+import { verifySession } from 'sveltekit-fireauth/server'
+
+export const load = (event) => ({
+  // if you're creating your own Firebase SDK client you don't need to load auth here
+  auth: event.locals.auth.getClientAuth(),
+  session: verifySession(event),
+})
+```
+
+```svelte
+<!-- +layout.svelte -->
+<script lang="ts">
+  import { onMount } from 'svelte'
+  import { syncAuthState } from 'sveltekit-fireauth/client'
+
+  export let data
+
+  $: ({ session, auth } = data)
+
+  onMount(() => {
+    const unsubscribe = syncAuthState(auth, session)
+    return () => {
+      unsubscribe()
+    }
+  })
+</script>
 ```
