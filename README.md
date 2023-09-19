@@ -204,3 +204,58 @@ export const load = ({ data }) => ({
   })
 </script>
 ```
+
+### OAuth
+
+It's possible to use OAuth with this library, however it requires a bit more setup, specially if you're using form actions. You may want to use an API route instead.
+
+Assuming you're using an API route, here's what you need:
+
+1. Setup the API route. This is going to receive an ID token and use the `loginWithIdToken` helper to log in the user.
+
+```typescript
+// /login/oauth/+server.ts
+import { error, json } from '@sveltejs/kit'
+import { loginWithIdToken } from 'sveltekit-fireauth/server'
+
+export const POST = async (event) => {
+  const { token } = await event.request.json()
+  if (!token) {
+    throw error(400, { message: 'Missing token' })
+  }
+  try {
+    await loginWithIdToken({ event, token })
+  } catch (e) {
+    throw error(401, { message: 'Unauthorized' })
+  }
+  return json({ success: true })
+}
+```
+
+2. Next setup your login button with an on click handler. We'll use Google sign in for this example. Notice how in this case we sign in on the client first to get the ID token and then on the server with that token.
+
+```svelte
+<script lang="ts">
+  import { invalidateAll } from '$app/navigation'
+  import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth'
+
+  export let data
+
+  const googleLogin = async () => {
+    const provider = new GoogleAuthProvider()
+    const { user } = await signInWithPopup(data.auth, provider)
+    const token = user.getIdToken()
+    const response = await fetch('/login/oauth', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    })
+    if (!response.ok) {
+      // handle login failure
+      await signOut(data.auth)
+    }
+    await invalidateAll()
+  }
+</script>
+
+<button on:click={googleLogin}>Sign in with Google</button>
+```
