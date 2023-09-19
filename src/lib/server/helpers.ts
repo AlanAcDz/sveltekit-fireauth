@@ -17,6 +17,7 @@ import {
 	type TokenLogin,
 	type UserSession,
 } from './types'
+import type { DecodedIdToken } from 'firebase-admin/auth'
 
 const loginURL = 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken'
 const refreshTokenURL = 'https://securetoken.googleapis.com/v1/token'
@@ -45,7 +46,7 @@ const setAuthCookie = (cookies: Cookies, { name, data, expiresIn }: CookieData) 
  * @param {SessionCookies} data - Data for creating session cookies.
  */
 const createSessionCookies = async ({ cookies, locals }: RequestEvent, data: SessionCookies) => {
-	const admin = locals.auth.getAdminAuth()
+	const { admin } = locals.auth
 	const { idToken, customToken, refreshToken, expiresIn } = data
 	// expiresIn is in milliseconds
 	const sessionCookie = await admin.createSessionCookie(idToken, {
@@ -90,8 +91,7 @@ const fetchAuthTokens = async ({ fetch, locals }: RequestEvent, customToken: str
  * @returns {Promise<string>} - The custom token for the logged-in user.
  */
 export const loginWithCredentials = async ({ event, email, password }: CredentialsLogin) => {
-	const admin = event.locals.auth.getAdminAuth()
-	const client = event.locals.auth.getClientAuth()
+	const { admin, client } = event.locals.auth
 	await setPersistence(client, inMemoryPersistence)
 	const { user } = await signInWithEmailAndPassword(client, email, password)
 	const customToken = await admin.createCustomToken(user.uid)
@@ -107,7 +107,7 @@ export const loginWithCredentials = async ({ event, email, password }: Credentia
  * @returns {Promise<string>} - The custom token for the logged-in user.
  */
 export const loginWithIdToken = async ({ event, token }: TokenLogin) => {
-	const admin = event.locals.auth.getAdminAuth()
+	const { admin } = event.locals.auth
 	const { uid } = await admin.verifyIdToken(token, true)
 	const customToken = await admin.createCustomToken(uid)
 	const { idToken, refreshToken, expiresIn } = await fetchAuthTokens(event, customToken)
@@ -123,8 +123,7 @@ export const loginWithIdToken = async ({ event, token }: TokenLogin) => {
  * @returns {Promise<{ token: string, user: UserCredential }>} - An object containing the custom token and user information for the newly signed-up user.
  */
 export const signupWithCredentials = async ({ event, email, password }: CredentialsLogin) => {
-	const admin = event.locals.auth.getAdminAuth()
-	const client = event.locals.auth.getClientAuth()
+	const { admin, client } = event.locals.auth
 	await setPersistence(client, inMemoryPersistence)
 	const { user } = await createUserWithEmailAndPassword(client, email, password)
 	const customToken = await admin.createCustomToken(user.uid)
@@ -177,6 +176,28 @@ const refreshIdToken = async ({ fetch, locals }: RequestEvent, refreshToken: str
 }
 
 /**
+ * Creates a user session object from a decoded ID token.
+ *
+ * @param {DecodedIdToken} decodedToken - The decoded ID token containing user information.
+ * @returns {Session} - An object representing the user session with decoded properties.
+ */
+const createSessionFromDecodedToken = ({
+	uid,
+	token,
+	email,
+	email_verified,
+	auth_time,
+	exp,
+}: DecodedIdToken & { token: string }): Session => ({
+	uid,
+	token,
+	email,
+	emailVerified: email_verified,
+	authTime: auth_time,
+	expireTime: exp,
+})
+
+/**
  * Refreshes the user's session by using a refresh token and updating authentication cookies.
  *
  * @param {RequestEvent} event - The SvelteKit request event object.
@@ -192,10 +213,10 @@ const refreshUserSession = async (event: RequestEvent): Promise<Session | null> 
 	if (!refreshResponse) {
 		return null
 	}
-	const admin = locals.auth.getAdminAuth()
+	const { admin } = locals.auth
 	const { refresh_token, id_token, expiresIn } = refreshResponse
 	try {
-		const { uid } = await admin.verifyIdToken(id_token, true)
+		const { uid, ...decodedTokenData } = await admin.verifyIdToken(id_token, true)
 		const customToken = await admin.createCustomToken(uid)
 		await createSessionCookies(event, {
 			idToken: id_token,
@@ -203,7 +224,7 @@ const refreshUserSession = async (event: RequestEvent): Promise<Session | null> 
 			customToken,
 			expiresIn,
 		})
-		return { uid, token: customToken }
+		return createSessionFromDecodedToken({ ...decodedTokenData, uid, token: customToken })
 	} catch (error) {
 		return null
 	}
@@ -221,16 +242,16 @@ export const verifySession = async (event: RequestEvent): Promise<Session | null
 	if (!session) {
 		return refreshUserSession(event)
 	}
-	const admin = locals.auth.getAdminAuth()
+	const { admin } = locals.auth
 	try {
-		const { uid } = await admin.verifySessionCookie(session, true)
+		const { uid, ...decodedTokenData } = await admin.verifySessionCookie(session, true)
 		let customToken = cookies.get(AuthCookies.CUSTOM)
 		if (!customToken) {
 			customToken = await admin.createCustomToken(uid)
 			const expiresIn = Date.now() / 1000 + 3600
 			setAuthCookie(cookies, { name: AuthCookies.CUSTOM, data: customToken, expiresIn })
 		}
-		return { uid, token: customToken }
+		return createSessionFromDecodedToken({ ...decodedTokenData, uid, token: customToken })
 	} catch (e) {
 		return refreshUserSession(event)
 	}
@@ -247,9 +268,17 @@ export const verifyUserSession = async (event: RequestEvent): Promise<UserSessio
 	if (!session) {
 		return null
 	}
-	const admin = event.locals.auth.getAdminAuth()
-	const { uid, email, emailVerified, disabled, displayName, phoneNumber, photoURL } =
-		await admin.getUser(session.uid)
+	const { admin } = event.locals.auth
+	const {
+		uid,
+		email,
+		emailVerified,
+		disabled,
+		displayName,
+		phoneNumber,
+		photoURL,
+		customClaims,
+	} = await admin.getUser(session.uid)
 	const user = {
 		uid,
 		email,
@@ -258,6 +287,7 @@ export const verifyUserSession = async (event: RequestEvent): Promise<UserSessio
 		displayName,
 		phoneNumber,
 		photoURL,
+		customClaims,
 	}
 	return { ...session, user }
 }

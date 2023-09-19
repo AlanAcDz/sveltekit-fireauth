@@ -10,8 +10,8 @@ import { createAdminAuth } from './config'
 export class FirebaseAuth {
 	refreshExpireTime: number
 	config: FirebaseOptions
-	private client: ClientAuth
-	private admin: AdminAuth
+	client: ClientAuth
+	admin: AdminAuth
 	/**
 	 * Create a new instance of FirebaseAuth.
 	 *
@@ -22,26 +22,6 @@ export class FirebaseAuth {
 		this.admin = createAdminAuth(serviceAccountKey)
 		this.refreshExpireTime = refreshExpireTime ?? 60 * 60 * 24 * 30 // default 30 days
 		this.config = firebaseConfig
-	}
-	/**
-	 * Get the server-side Firebase Admin Authentication instance.
-	 *
-	 * @throws {Error} Throws an error if called in a browser environment.
-	 * @returns {AdminAuth} The Firebase Admin Authentication instance.
-	 */
-	getAdminAuth(): AdminAuth {
-		if (window) {
-			throw new Error('[Auth]: Firebase Admin is not supported in the browser')
-		}
-		return this.admin
-	}
-	/**
-	 * Get the client-side Firebase Authentication instance.
-	 *
-	 * @returns {ClientAuth} The Firebase Authentication instance for client-side use.
-	 */
-	getClientAuth(): ClientAuth {
-		return this.client
 	}
 }
 

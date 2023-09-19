@@ -55,12 +55,23 @@ export interface AuthConfig {
 export interface Session {
 	uid: string
 	token: string
+	email?: string
+	emailVerified?: boolean
+	authTime: number
+	expireTime: number
 }
 
 export interface UserSession extends Session {
 	user: Pick<
 		UserRecord,
-		'uid' | 'email' | 'emailVerified' | 'disabled' | 'displayName' | 'phoneNumber' | 'photoURL'
+		| 'uid'
+		| 'email'
+		| 'emailVerified'
+		| 'disabled'
+		| 'displayName'
+		| 'phoneNumber'
+		| 'photoURL'
+		| 'customClaims'
 	>
 }
 

@@ -1,6 +1,8 @@
 import { onAuthStateChanged, signInWithCustomToken, signOut } from 'firebase/auth'
 import type { ClientAuth, Session } from '../server'
 
+export { createFirebaseAuth } from '../client/config'
+
 /**
  * Synchronizes the Firebase Authentication state with the session.
  *
