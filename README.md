@@ -156,9 +156,20 @@ If you're using the Firebase SDK on the client and have security rules for Fires
 import { verifySession } from 'sveltekit-fireauth/server'
 
 export const load = (event) => ({
-  // if you're creating your own Firebase SDK client you don't need to load auth here
-  auth: event.locals.auth.getClientAuth(),
+  // if you're creating your own Firebase SDK client you don't need to load auth config here
+  authConfig: event.locals.auth.config,
   session: verifySession(event),
+})
+```
+
+```typescript
+// +layout.ts
+import { createFirebaseAuth } from 'sveltekit-fireauth/client'
+
+export const load = ({ data }) => ({
+  // if you're creating your own Firebase SDK client you don't need to load auth here
+  auth: createFirebaseAuth(data.authConfig),
+  session: data.session,
 })
 ```
 

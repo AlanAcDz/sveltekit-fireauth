@@ -1,5 +1,17 @@
 <script lang="ts">
+	import { onMount } from 'svelte'
+	import { syncAuthState } from '$lib/client'
+
 	export let data
+
+	$: ({ session, auth } = data)
+
+	onMount(() => {
+		const unsubscribe = syncAuthState(auth, session)
+		return () => {
+			unsubscribe()
+		}
+	})
 </script>
 
 {#if data.session}
