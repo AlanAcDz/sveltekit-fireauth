@@ -14,3 +14,15 @@
 	</label>
 	<button>Log in</button>
 </form>
+<p>Or create an account if you don't have one yet</p>
+<form action="?/signup" method="POST">
+	<label>
+		<span>Email</span>
+		<input type="email" name="email" />
+	</label>
+	<label>
+		<span>Password</span>
+		<input type="password" name="password" />
+	</label>
+	<button>Create account</button>
+</form>

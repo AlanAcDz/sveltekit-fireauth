@@ -56,16 +56,25 @@ export const handle: Handle = createAuthHandle({
 
 You may want to use the [sequence](https://kit.svelte.dev/docs/modules#sveltejs-kit-hooks-sequence) helper function to set up multiple handle hooks, especially if you are going to use this library's other handle hooks.
 
-4. Set up some form actions to log in and log out a user.
+4. Set up some form actions to log in, sign up and log out a user.
 
 ```typescript
-import { loginWithCredentials, signOut } from 'sveltekit-fireauth/server'
+import { loginWithCredentials, signupWithCredentials, signOut } from 'sveltekit-fireauth/server'
 
 export const actions = {
   login: async (event) => {
     // Get the email and password from the form
     try {
       await loginWithCredentials({ event, email, password })
+    } catch (e) {
+      throw error(401, { message: 'Unauthorized' })
+    }
+    throw redirect(303, '/')
+  },
+  signup: async (event) => {
+    // Get the email and password from the form
+    try {
+      await signupWithCredentials({ event, email, password })
     } catch (e) {
       throw error(401, { message: 'Unauthorized' })
     }
