@@ -69,16 +69,16 @@ export const actions = {
     } catch (e) {
       throw error(401, { message: 'Unauthorized' })
     }
-    throw redirect(303, '/')
+    throw redirect(303, '/protected')
   },
   signup: async (event) => {
     // Get the email and password from the form
     try {
       await signupWithCredentials({ event, email, password })
     } catch (e) {
-      throw error(401, { message: 'Unauthorized' })
+      throw error(401, { message: 'Account cannot be created' })
     }
-    throw redirect(303, '/')
+    throw redirect(303, '/protected')
   },
   logout: async ({ cookies }) => {
     return signOut({ cookies, redirectRoute: '/login' })
@@ -117,11 +117,11 @@ export const load = (event) => ({
 You can protect a page using the `onlyAuthenticatedLoad` function inside any page's `+page.server.ts` file. For example:
 
 ```typescript
-// src/routes/protected/+page.server.ts
+// /protected/+page.server.ts
 import { onlyAuthenticatedLoad } from 'sveltekit-fireauth/server'
 
 export const load = onlyAuthenticatedLoad({
-  redirectRoute: '/',
+  redirectRoute: '/login',
   load: () => {
     // regular load function here
   },
@@ -131,11 +131,11 @@ export const load = onlyAuthenticatedLoad({
 Passing a load function is optional, in case a particular page does not load anything from the server.
 
 ```typescript
-// src/routes/protected/+page.server.ts
+// /protected/+page.server.ts
 import { onlyAuthenticatedLoad } from 'sveltekit-fireauth/server'
 
 export const load = onlyAuthenticatedLoad({
-  redirectRoute: '/',
+  redirectRoute: '/login',
 })
 ```
 
@@ -148,7 +148,7 @@ import { createAuthHandle } from 'sveltekit-fireauth/server'
 
 const protectedRoutesHandle: Handle = createProtectedRoutesHandle({
   baseRoute: '/protected', // the group of routes you want to protect
-  redirectRoute: '/',
+  redirectRoute: '/login',
 })
 
 export const handle = sequence(/* ... */)
@@ -160,27 +160,31 @@ There also exists `onlyPublicLoad` and `createPublicRoutesHandle` functions for 
 
 If you're using the Firebase SDK on the client and have security rules for Firestore or Storage you will need to sync the server-side session with the client.
 
+1. In a `+layout.server.ts` file load the session and auth config object. This object is the Firebase SDK config object. If you're creating your own Firebase SDK client you don't need to load auth config here
+
 ```typescript
 // +layout.server.ts
 import { verifySession } from 'sveltekit-fireauth/server'
 
 export const load = (event) => ({
-  // if you're creating your own Firebase SDK client you don't need to load auth config here
   authConfig: event.locals.auth.config,
   session: verifySession(event),
 })
 ```
+
+2. In the `+layout.ts` file get the session that was loaded from the server and create the Firebase Auth client using the auth config. If you're creating your own Firebase SDK client you don't need to create the Firebase Auth client here.
 
 ```typescript
 // +layout.ts
 import { createFirebaseAuth } from 'sveltekit-fireauth/client'
 
 export const load = ({ data }) => ({
-  // if you're creating your own Firebase SDK client you don't need to load auth here
   auth: createFirebaseAuth(data.authConfig),
   session: data.session,
 })
 ```
+
+3. In the `+layout.svelte` file use the `syncAuthState` function inside an onMount callback.
 
 ```svelte
 <!-- +layout.svelte -->
