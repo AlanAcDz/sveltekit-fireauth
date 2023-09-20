@@ -1,8 +1,18 @@
+[![Release](https://github.com/AlanAcDz/sveltekit-fireauth/actions/workflows/release.yaml/badge.svg?branch=main&event=push)](https://github.com/AlanAcDz/sveltekit-fireauth/actions/workflows/release.yaml)
+[![npm](https://img.shields.io/npm/v/sveltekit-fireauth/latest)](https://www.npmjs.com/package/sveltekit-fireauth)
+
 # sveltekit-fireauth
 
 A SvelteKit library for seamless server-side authentication using Firebase Authentication.
 
 Partially inspired by [next-firebase-auth](https://github.com/gladly-team/next-firebase-auth), check out its discussion of [when (not) to use this package](https://github.com/gladly-team/next-firebase-auth#when-not-to-use-this-package).
+
+This is a new library so bugs are expected, please open a new issue if you encounter any or (better yet) open a new PR. Please be patient as this is a one man team here :)
+
+## To do
+
+- [] Make it work with Firebase emulator
+- [] Fully automate releases
 
 ## Quick start
 
