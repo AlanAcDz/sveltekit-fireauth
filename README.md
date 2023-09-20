@@ -11,8 +11,8 @@ This is a new library so bugs are expected, please open a new issue if you encou
 
 ## To do
 
-- [] Make it work with Firebase emulator
-- [] Fully automate releases
+- [ ] Make it work with Firebase emulator
+- [ ] Fully automate releases
 
 ## Quick start
 
