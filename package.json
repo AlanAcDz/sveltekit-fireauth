@@ -1,6 +1,6 @@
 {
 	"name": "sveltekit-fireauth",
-	"version": "1.0.0",
+	"version": "0.1.0",
 	"author": "Alan Acuña <alantheace@gmail.com> (https://devaces.com.mx)",
 	"description": "A SvelteKit library for seamless server-side authentication using Firebase Authentication.",
 	"keywords": [
